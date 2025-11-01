@@ -1,4 +1,4 @@
 // config.js
-window.TWITCH_TOKEN = 'qmf12cyaqy62q6awh2u698n1jmjak6';
+window.TWITCH_TOKEN = '5r5lzj2142ea1yb9g6wkymb4p60r3i';
 window.TWITCH_CHANNEL = 'doraemon117';
 window.TWITCH_USERNAME = 'doraemon117';
