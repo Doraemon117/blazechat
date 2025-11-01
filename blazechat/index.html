@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BlazeChat Widget - OBS</title>
+
+  <!-- Fuente más elegante -->
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --violet: #8c52ff;
+      --magenta: #ff66b3;
+      --glow: 0 0 12px rgba(255,102,179,0.25);
+      --bg: rgba(22,10,28,0.35);
+      --txt: #fdf9ff;
+    }
+
+    html,body {
+      height: 100%;
+      margin: 0;
+      background: transparent;
+      font-family: 'Quicksand', system-ui;
+    }
+
+    .widget {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-start;
+      padding: 16px;
+    }
+
+    .chat-panel {
+      width: 420px;
+      backdrop-filter: blur(8px) saturate(130%);
+      background: linear-gradient(180deg, rgba(140,82,255,0.1), rgba(255,102,179,0.05));
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 0 20px rgba(140,82,255,0.25);
+      position: relative;
+      padding: 12px;
+      overflow: hidden;
+    }
+
+    /* 🔥 efecto de fuego/brasa animado */
+    .chat-panel::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 2px solid transparent;
+      background: linear-gradient(45deg, var(--violet), var(--magenta)) border-box;
+      mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      animation: brasa 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes brasa {
+      from { opacity: 0.45; filter: blur(2px); }
+      to { opacity: 1; filter: blur(1px); }
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: conic-gradient(from 220deg, var(--magenta), var(--violet));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
+      box-shadow: 0 0 12px rgba(255,102,179,0.5);
+    }
+
+    .title {
+      color: var(--txt);
+      font-weight: 700;
+      font-size: 15px;
+      text-shadow: 0 0 6px rgba(255,102,179,0.4);
+    }
+
+    .sub {
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .messages {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 380px;
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.2) transparent;
+    }
+
+    .msg {
+      display: flex;
+      gap: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 8px;
+      animation: fadeIn 0.25s ease;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, var(--violet), var(--magenta));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    .content { flex: 1; min-width: 0; }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .user {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--magenta);
+      text-shadow: 0 0 6px rgba(255,102,179,0.6);
+    }
+
+    .badges {
+      display: flex;
+      gap: 4px;
+    }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+    }
+
+    .text {
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--txt);
+      line-height: 1.3;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="chat-panel" id="panel">
+      <div class="header">
+        <div class="logo">B</div>
+        <div>
+          <div class="title">Blaze Chat</div>
+          <div class="sub" id="subline">Conexión en tiempo real</div>
+        </div>
+      </div>
+      <div class="messages" id="messages"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tmi.js/1.8.5/tmi.min.js"></script>
+  <script>
+    window.addEventListener('load', () => {
+      if (!window.tmi) {
+        console.error("❌ tmi.js no cargó");
+        return;
+      }
+
+      const channel = 'doraemon117';
+      const username = 'doraemon117';
+      const token = 'qmf12cyaqy62q6awh2u698n1jmjak6'; // 👈 reemplaza por tu token real
+      const messagesEl = document.getElementById('messages');
+
+      const client = new tmi.Client({
+        options: { debug: true },
+        connection: { reconnect: true, secure: true },
+        identity: { username, password: token },
+        channels: [channel]
+      });
+
+      client.connect().then(() => console.log('✅ Conectado a Twitch chat'));
+
+      document.getElementById('subline').textContent = `Canal: ${channel}`;
+
+      function makeAvatar(name) {
+        const el = document.createElement('div');
+        el.className = 'avatar';
+        el.textContent = (name || '?').charAt(0).toUpperCase();
+        return el;
+      }
+
+      function renderMessage({ displayName, message, badges }) {
+        const container = document.createElement('div');
+        container.className = 'msg';
+        container.appendChild(makeAvatar(displayName));
+
+        const content = document.createElement('div');
+        content.className = 'content';
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+
+        const user = document.createElement('div');
+        user.className = 'user';
+        user.textContent = displayName;
+
+        const badgesWrap = document.createElement('div');
+        badgesWrap.className = 'badges';
+        if (badges?.subscriber) badgesWrap.innerHTML += '<span class="badge">SUB</span>';
+        if (badges?.moderator) badgesWrap.innerHTML += '<span class="badge">MOD</span>';
+        if (badges?.vip) badgesWrap.innerHTML += '<span class="badge">VIP</span>';
+
+        meta.append(user, badgesWrap);
+
+        const text = document.createElement('div');
+        text.className = 'text';
+        text.textContent = message;
+
+        content.append(meta, text);
+        container.append(content);
+        messagesEl.append(container);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+
+        while (messagesEl.children.length > 20)
+          messagesEl.removeChild(messagesEl.firstChild);
+      }
+
+      client.on('message', (ch, tags, msg, self) => {
+        if (self) return;
+        renderMessage({
+          displayName: tags['display-name'] || tags.username,
+          message: msg,
+          badges: tags.badges
+        });
+      });
+    });
+  </script>
+</body>
+</html>
